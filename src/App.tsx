@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, ReactNode, useCallback } from 'react';
+import { useState, useEffect, useMemo, ReactNode } from 'react';
 import { format } from 'date-fns';
 import { 
   LayoutDashboard, 
@@ -16,7 +16,13 @@ import {
   Plus,
   Trash2,
   Lightbulb,
-  Sparkles
+  Sparkles,
+  ShoppingCart,
+  User,
+  Flame,
+  Check,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -56,22 +62,80 @@ function useTehranTime() {
   }, [time]);
 }
 
+function parseTime(timeStr: string) {
+  const parts = timeStr.trim().split(' ');
+  if (parts.length < 2) return new Date();
+  const [time, modifier] = parts;
+  let [hours, minutes] = time.split(':').map(Number);
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  const d = new Date();
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+}
+
+function multiplyItem(item: string, days: number): string {
+  if (days === 1) return item;
+  if (item.toLowerCase().includes('few drops')) return item;
+  
+  const match = item.match(/^([0-9.]+)(.*)$/);
+  if (match && !isNaN(parseFloat(match[1]))) {
+    const qty = parseFloat(match[1]);
+    return `${qty * days}${match[2]}`;
+  }
+  return `${item} (x${days})`;
+}
+
+function ConsistencyRing({ score }: { score: number }) {
+  const radius = 36;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  
+  return (
+    <div className="relative w-24 h-24 flex items-center justify-center">
+       <svg className="w-full h-full transform -rotate-90">
+         <circle cx="48" cy="48" r={radius} className="stroke-slate-100" strokeWidth="8" fill="none" />
+         <circle 
+           cx="48" 
+           cy="48" 
+           r={radius} 
+           className={cn("transition-all duration-1000 ease-out", score >= 80 ? "stroke-purple-500" : score >= 50 ? "stroke-blue-500" : "stroke-orange-500")} 
+           strokeWidth="8" 
+           fill="none" 
+           strokeDasharray={circumference}
+           strokeDashoffset={offset}
+           strokeLinecap="round"
+         />
+       </svg>
+       <div className="absolute flex flex-col items-center justify-center">
+         <span className="text-2xl font-black text-slate-800">{score}</span>
+         <span className="text-[8px] uppercase tracking-widest font-black text-slate-400">Score</span>
+       </div>
+    </div>
+  );
+}
+
 export default function App() {
   const tehranTime = useTehranTime();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'chart' | 'meals'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'chart' | 'meals' | 'groceries' | 'profile'>('dashboard');
   const [selectedDayIndex, setSelectedDayIndex] = useState(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
   const [todayStr] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [showCelebration, setShowCelebration] = useState(false);
+  const [now, setNow] = useState(new Date());
+  const [cartDuration, setCartDuration] = useState<number>(7);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [data, setData] = useState<AppData>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Migration check for weights
-        if (!Array.isArray(parsed.weights)) {
-          parsed.weights = [];
-        }
+        if (!Array.isArray(parsed.weights)) parsed.weights = [];
+        if (!parsed.groceryChecklist) parsed.groceryChecklist = {};
         return parsed;
       } catch (e) {
         console.error("Failed to parse appData", e);
@@ -82,7 +146,8 @@ export default function App() {
       waterIntake: {},
       completedMeals: {},
       selectedOptions: {},
-      isTrainingDay: false
+      isTrainingDay: false,
+      groceryChecklist: {}
     };
   });
 
@@ -167,6 +232,16 @@ export default function App() {
     });
   };
 
+  const toggleGroceryItem = (item: string) => {
+    setData(prev => ({
+      ...prev,
+      groceryChecklist: {
+        ...(prev.groceryChecklist || {}),
+        [item]: !prev.groceryChecklist?.[item]
+      }
+    }));
+  };
+
   const filteredMeals = useMemo(() => {
     return MEAL_PLAN.filter(meal => {
       if (meal.isWorkoutSpecific === 'training' && !data.isTrainingDay) return false;
@@ -179,13 +254,67 @@ export default function App() {
     return filteredMeals.find(m => !completed.includes(m.id));
   }, [filteredMeals, data.completedMeals, todayStr]);
 
-  const waterProgress = (data.waterIntake[todayStr] || 0) / 4000;
   const mealsCompleted = (data.completedMeals[todayStr] || []).filter(id => MEAL_PLAN.some(m => m.id === id)).length;
+
+  const todayScore = Math.round(
+    (Math.min((data.waterIntake[todayStr] || 0) / 4000, 1) * 40) +
+    (Math.min(mealsCompleted / (filteredMeals.length || 1), 1) * 60)
+  );
 
   const dailyTip = useMemo(() => {
     const hash = todayStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return MOTIVATIONAL_TIPS[hash % MOTIVATIONAL_TIPS.length];
   }, [todayStr]);
+
+  const getGreeting = () => {
+    const hr = new Date().getHours();
+    if (hr < 12) return 'Good Morning';
+    if (hr < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const groceryList = useMemo(() => {
+    const list: Record<string, string[]> = {
+      'Proteins': [],
+      'Carbs & Grains': [],
+      'Fruits & Veggies': [],
+      'Fats & Nuts': [],
+      'Beverages & Supplements': [],
+      'Other': []
+    };
+    
+    MEAL_PLAN.forEach(meal => {
+      const optionIdx = data.selectedOptions[meal.id] || 0;
+      const option = meal.options[optionIdx];
+      option.items.forEach(item => {
+        const lower = item.toLowerCase();
+        let categorized = false;
+        if (['chicken', 'meat', 'fish', 'egg', 'whey', 'cheese', 'soy', 'beef', 'steak'].some(k => lower.includes(k))) { list['Proteins'].push(item); categorized = true; }
+        else if (['rice', 'pasta', 'potato', 'oats', 'bread', 'toast', 'macaroni'].some(k => lower.includes(k))) { list['Carbs & Grains'].push(item); categorized = true; }
+        else if (['banana', 'apple', 'lettuce', 'tomato', 'carrot', 'beans', 'herbs', 'salad', 'lemon', 'spinach', 'veg'].some(k => lower.includes(k))) { list['Fruits & Veggies'].push(item); categorized = true; }
+        else if (['walnut', 'peanut', 'almond', 'seeds', 'olive oil', 'butter'].some(k => lower.includes(k))) { list['Fats & Nuts'].push(item); categorized = true; }
+        else if (['milk', 'water', 'tea', 'caffeine', 'coffee'].some(k => lower.includes(k))) { list['Beverages & Supplements'].push(item); categorized = true; }
+        if (!categorized) list['Other'].push(item);
+      });
+    });
+    
+    Object.keys(list).forEach(key => {
+      list[key] = [...new Set(list[key])];
+    });
+    
+    return list;
+  }, [data.selectedOptions]);
+
+  const getCountdown = (timeStr: string) => {
+    const target = parseTime(timeStr);
+    const diffMs = target.getTime() - now.getTime();
+    if (diffMs < 0) return "Overdue";
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `in ${diffMins} min`;
+    const hr = Math.floor(diffMins / 60);
+    const min = diffMins % 60;
+    return `in ${hr}h ${min}m`;
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 font-sans text-slate-900 select-none overflow-x-hidden">
@@ -255,12 +384,41 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
+              <div className="flex items-end justify-between px-2 pt-2">
+                 <div>
+                   <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">{getGreeting()}</p>
+                   <h2 className="text-2xl font-black text-slate-800 mt-0.5">Let's crush today.</h2>
+                 </div>
+              </div>
+
+              {/* Consistency Matrix */}
+              <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1 text-slate-400 font-bold text-xs uppercase tracking-widest">
+                    <Flame size={16} className={todayScore >= 80 ? "text-orange-500 animate-pulse" : "text-slate-300"} />
+                    <span>Consistency</span>
+                  </div>
+                  <p className="text-3xl font-black text-slate-800">{todayScore}<span className="text-lg text-slate-400">%</span></p>
+                  <p className="text-xs font-medium text-slate-500 mt-2 max-w-[150px] leading-relaxed">
+                    {todayScore >= 80 ? "On fire! Keep pushing." : "Every action counts. Hydrate or eat to raise your score!"}
+                  </p>
+                </div>
+                <ConsistencyRing score={todayScore} />
+              </section>
+
               {/* Next Action */}
               <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-                <div className="flex items-center gap-2 mb-4 text-slate-400 font-medium text-sm">
-                  <Target size={16} />
-                  <span>Next Action</span>
+                <div className="flex items-center justify-between mb-4">
+                   <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest">
+                     <Target size={16} className="text-blue-500" />
+                     <span>Next Action</span>
+                   </div>
+                   {nextMeal && (
+                      <span className={cn("text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md", getCountdown(nextMeal.time) === 'Overdue' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600')}>
+                        {getCountdown(nextMeal.time)}
+                      </span>
+                   )}
                 </div>
                 {nextMeal ? (
                   <div className="relative">
@@ -308,18 +466,6 @@ export default function App() {
                     <p className="text-slate-400 text-sm">Target reached for today.</p>
                   </div>
                 )}
-              </section>
-
-              {/* Progress */}
-              <section className="grid grid-cols-2 gap-4">
-                <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Completed</p>
-                  <p className="text-3xl font-black text-slate-800">{mealsCompleted}</p>
-                </div>
-                <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
-                  <p className="text-3xl font-black text-slate-800">{filteredMeals.length - mealsCompleted}</p>
-                </div>
               </section>
 
               {/* Water Tracker - MOVED TO BOTTOM */}
@@ -582,23 +728,130 @@ export default function App() {
                </div>
              </motion.div>
           )}
+           {activeTab === 'profile' && (
+             <motion.div key="profile" initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} exit={{opacity:0, x:-20}} className="space-y-6">
+                <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center">
+                   <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-xl">
+                      <User size={32} className="text-slate-400" />
+                   </div>
+                   <h2 className="text-xl font-black text-slate-800">Athlete</h2>
+                   <p className="text-sm font-bold text-slate-400 mt-1">Ready to crush it</p>
+                </section>
+
+                <section className="grid grid-cols-2 gap-4">
+                   <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col items-center">
+                      <Flame size={24} className="text-orange-500 mb-2" />
+                      <p className="text-2xl font-black text-slate-800">
+                         {Object.keys(data.completedMeals).length}
+                      </p>
+                      <p className="text-[9px] uppercase tracking-widest font-bold text-slate-400 mt-1">Active Days</p>
+                   </div>
+                   <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col items-center">
+                      <Droplets size={24} className="text-blue-500 mb-2" />
+                      <p className="text-2xl font-black text-slate-800">
+                         {(Object.values(data.waterIntake) as number[]).reduce((a,b)=>a+(b/1000),0).toFixed(1)}L
+                      </p>
+                      <p className="text-[9px] uppercase tracking-widest font-bold text-slate-400 mt-1">Total Hydration</p>
+                   </div>
+                </section>
+                
+                <section className="bg-white rounded-3xl p-2 shadow-sm border border-slate-100">
+                   <button onClick={() => {if(confirm('Reset all progress?')) { localStorage.removeItem(STORAGE_KEY); window.location.reload(); }}} className="w-full text-left px-5 py-4 text-red-500 font-bold text-sm flex justify-between items-center active:scale-95 transition-all">
+                      Reset All Data
+                      <ChevronRight size={16} />
+                   </button>
+                </section>
+             </motion.div>
+          )}
+
+          {activeTab === 'groceries' && (
+             <motion.div
+                key="groceries"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+             >
+                <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-3xl p-6 text-white shadow-lg shadow-purple-500/20 relative overflow-hidden">
+                   <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4 pointer-events-none">
+                      <ShoppingCart size={120} />
+                   </div>
+                   <div className="flex justify-between items-start relative z-10">
+                     <div className="pr-4">
+                       <h2 className="text-2xl font-black mb-1">Smart Cart</h2>
+                       <p className="text-blue-100 text-sm font-medium">Auto-generated from your active meal plan structure.</p>
+                     </div>
+                     <div className="bg-white/20 backdrop-blur-md rounded-xl px-3 py-2 shrink-0 flex items-center gap-1 cursor-pointer">
+                       <select 
+                         value={cartDuration}
+                         onChange={(e) => setCartDuration(Number(e.target.value))}
+                         className="bg-transparent text-white font-bold text-sm outline-none cursor-pointer appearance-none [&>option]:text-slate-800"
+                       >
+                         <option value={7}>1 Week</option>
+                         <option value={14}>2 Weeks</option>
+                         <option value={30}>1 Month</option>
+                       </select>
+                       <ChevronDown size={14} className="pointer-events-none" />
+                     </div>
+                   </div>
+                </div>
+
+                <div className="space-y-6">
+                   {(Object.entries(groceryList) as [string, string[]][]).map(([category, items]) => {
+                      if (items.length === 0) return null;
+                      return (
+                         <section key={category} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 inline-flex items-center gap-2">
+                               {category}
+                               <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px]">{items.length}</span>
+                            </h3>
+                            <div className="space-y-3">
+                               {items.map((item, idx) => {
+                                  const isChecked = data.groceryChecklist?.[item] || false;
+                                  const displayItem = multiplyItem(item, cartDuration);
+                                  return (
+                                     <label key={idx} className={cn("flex items-start gap-3 cursor-pointer group transition-all", isChecked && "opacity-50 grayscale")}>
+                                        <input type="checkbox" className="hidden" checked={isChecked} onChange={() => toggleGroceryItem(item)} />
+                                        <div className={cn("w-5 h-5 rounded flex items-center justify-center border transition-all mt-0.5 shrink-0", isChecked ? "bg-blue-600 border-blue-600 shadow-sm shadow-blue-200" : "border-slate-300 bg-slate-50 group-hover:border-blue-400")}>
+                                           {isChecked && <Check size={14} className="text-white" />}
+                                        </div>
+                                        <span className={cn("text-sm font-bold transition-all", isChecked ? "text-slate-400 line-through" : "text-slate-700")}>{displayItem}</span>
+                                     </label>
+                                  )
+                               })}
+                            </div>
+                         </section>
+                      )
+                   })}
+                </div>
+             </motion.div>
+          )}
+
         </AnimatePresence>
       </main>
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 px-8 py-4 flex justify-between items-center z-50 rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
-        <NavButton 
-          active={activeTab === 'chart'} 
-          onClick={() => setActiveTab('chart')}
-          icon={<TrendingUp size={24} />}
-          label="Measures"
-        />
-        <div className="relative -mt-12">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 px-6 py-4 flex justify-between items-center z-50 rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
+        <div className="flex gap-4">
+           <NavButton 
+             active={activeTab === 'chart'} 
+             onClick={() => setActiveTab('chart')}
+             icon={<TrendingUp size={24} />}
+             label="Measure"
+           />
+           <NavButton 
+             active={activeTab === 'meals'} 
+             onClick={() => setActiveTab('meals')}
+             icon={<UtensilsCrossed size={24} />}
+             label="Meals"
+           />
+        </div>
+        <div className="relative -mt-12 px-2">
           <button 
             id="nav-dashboard-btn"
             onClick={() => setActiveTab('dashboard')}
             className={cn(
-              "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl",
+              "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl mx-auto",
               activeTab === 'dashboard' 
                 ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white scale-110 rotate-0 shadow-blue-300" 
                 : "bg-white text-slate-400 scale-100 rotate-45 shadow-slate-200"
@@ -607,12 +860,20 @@ export default function App() {
             <LayoutDashboard size={28} />
           </button>
         </div>
-        <NavButton 
-          active={activeTab === 'meals'} 
-          onClick={() => setActiveTab('meals')}
-          icon={<UtensilsCrossed size={24} />}
-          label="Meals"
-        />
+        <div className="flex gap-4">
+           <NavButton 
+             active={activeTab === 'groceries'} 
+             onClick={() => setActiveTab('groceries')}
+             icon={<ShoppingCart size={24} />}
+             label="Cart"
+           />
+           <NavButton 
+             active={activeTab === 'profile'} 
+             onClick={() => setActiveTab('profile')}
+             icon={<User size={24} />}
+             label="Profile"
+           />
+        </div>
       </nav>
     </div>
   );

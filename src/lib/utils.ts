@@ -35,6 +35,7 @@ export type AppData = {
   completedMeals: Record<string, string[]>; // dateStr -> mealIds[]
   selectedOptions: Record<string, number>; // mealId -> optionIndex
   isTrainingDay: boolean;
+  groceryChecklist: Record<string, boolean>;
 };
 
 export const STORAGE_KEY = 'appData_v4';

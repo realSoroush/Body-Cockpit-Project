@@ -116,6 +116,90 @@ function ConsistencyRing({ score }: { score: number }) {
   );
 }
 
+function ItemLongPress({ item, onClick, onEdit, children, className }: any) {
+  const [isPressing, setIsPressing] = useState(false);
+  const [hasLongPressed, setHasLongPressed] = useState(false);
+
+  useEffect(() => {
+    let timer: any;
+    if (isPressing) {
+      setHasLongPressed(false);
+      timer = setTimeout(() => {
+        setHasLongPressed(true);
+        setIsPressing(false);
+        if (navigator.vibrate) navigator.vibrate([50]);
+        onEdit(item);
+      }, 600);
+    }
+    return () => clearTimeout(timer);
+  }, [isPressing, item, onEdit]);
+
+  return (
+    <div
+      onPointerDown={() => setIsPressing(true)}
+      onPointerUp={(e) => setIsPressing(false)}
+      onPointerLeave={() => setIsPressing(false)}
+      onContextMenu={(e) => e.preventDefault()}
+      onClick={(e) => {
+        if (hasLongPressed) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        if (onClick) onClick(e);
+      }}
+      className={className}
+    >
+      {children}
+    </div>
+  );
+}
+
+function useLongPressProgress(action: () => void, ms = 1500) {
+  const [isPressing, setIsPressing] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let animationFrame: number;
+    let startTime: number;
+
+    if (isPressing) {
+      const animate = (time: number) => {
+        if (!startTime) startTime = time;
+        const elapsed = time - startTime;
+        const p = Math.min(elapsed / ms, 1);
+        setProgress(p);
+
+        if (p >= 1) {
+          action();
+          setIsPressing(false);
+          if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+        } else {
+          animationFrame = requestAnimationFrame(animate);
+        }
+      };
+      animationFrame = requestAnimationFrame(animate);
+    } else {
+      setProgress(0);
+    }
+
+    return () => {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+    };
+  }, [isPressing, action, ms]);
+
+  return {
+    handlers: {
+      onPointerDown: () => setIsPressing(true),
+      onPointerUp: () => setIsPressing(false),
+      onPointerLeave: () => setIsPressing(false),
+      onContextMenu: (e: any) => e.preventDefault(),
+    },
+    progress,
+    isPressing
+  };
+}
+
 export default function App() {
   const tehranTime = useTehranTime();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'chart' | 'meals' | 'groceries' | 'profile'>('dashboard');
@@ -129,6 +213,20 @@ export default function App() {
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, message: string, action: () => void} | null>(null);
   const [waterReminderModal, setWaterReminderModal] = useState(false);
   const [weeklySummaryModal, setWeeklySummaryModal] = useState<{isOpen: boolean, hydrationAvg: number, mealAvg: number} | null>(null);
+  const [editingItemModal, setEditingItemModal] = useState<{isOpen: boolean, original: string, text: string} | null>(null);
+
+  const resetTodayProgress = useLongPressProgress(() => {
+    setData(prev => ({
+      ...prev,
+      waterIntake: { ...prev.waterIntake, [todayStr]: 0 },
+      completedMeals: { ...prev.completedMeals, [todayStr]: [] }
+    }));
+  }, 1000);
+
+  const formatProgress = useLongPressProgress(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.reload();
+  }, 1500);
 
   useEffect(() => {
     const checkScheduledEvents = () => {
@@ -356,6 +454,7 @@ export default function App() {
       const optionIdx = data.selectedOptions[meal.id] || 0;
       const option = meal.options[optionIdx];
       option.items.forEach(item => {
+        if (data.deletedItems?.includes(item)) return;
         const lower = item.toLowerCase();
         let categorized = false;
         if (['chicken', 'meat', 'fish', 'egg', 'whey', 'cheese', 'soy', 'beef', 'steak'].some(k => lower.includes(k))) { list['Proteins'].push(item); categorized = true; }
@@ -635,7 +734,7 @@ export default function App() {
                 <button 
                   onClick={updateWater}
                   disabled={(data.waterIntake[todayStr] || 0) >= 4000}
-                  className="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-950 py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 border border-zinc-200"
+                  className="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-950 py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 border border-zinc-200 select-none"
                 >
                   <Plus size={18} />
                   Add 250ml
@@ -861,11 +960,16 @@ export default function App() {
                        </div>
 
                        <div className="space-y-2 mb-6">
-                          {option.items.map((item, i) => (
-                            <div key={i} className="flex items-start gap-3">
-                              <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 mt-1.5 shrink-0" />
-                              <span className="text-zinc-700 text-sm leading-relaxed">{item}</span>
-                            </div>
+                          {option.items.filter(item => !data.deletedItems?.includes(item)).map((item, i) => (
+                            <ItemLongPress 
+                              key={i} 
+                              item={item}
+                              className="flex items-start gap-3 cursor-pointer select-none group"
+                              onEdit={(original: string) => setEditingItemModal({ isOpen: true, original, text: data.editedItems?.[original] || original })}
+                            >
+                              <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 mt-1.5 shrink-0 group-hover:bg-zinc-800 transition-colors" />
+                              <span className="text-zinc-700 text-sm leading-relaxed group-hover:text-zinc-950 transition-colors">{data.editedItems?.[item] || item}</span>
+                            </ItemLongPress>
                           ))}
                        </div>
 
@@ -917,17 +1021,63 @@ export default function App() {
                    </div>
                 </section>
                 
-                <section className="bg-white rounded-2xl p-2 shadow-sm border border-zinc-200">
-                   <button onClick={() => setConfirmModal({
-                      isOpen: true,
-                      message: 'Are you sure you want to format the system? All your progress will be permanently lost.',
-                      action: () => {
-                        localStorage.removeItem(STORAGE_KEY);
-                        window.location.reload();
-                      }
-                   })} className="w-full text-left px-5 py-4 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl font-semibold text-sm flex justify-between items-center active:scale-95 transition-all">
-                      Format System
-                      <ChevronRight size={16} />
+                <section className="bg-white rounded-2xl p-2 shadow-sm border border-zinc-200 flex flex-col gap-1">
+                   <button 
+                     {...resetTodayProgress.handlers}
+                     className="w-full text-left px-5 py-4 text-orange-600 bg-white hover:bg-orange-50 rounded-xl font-semibold text-sm flex justify-between items-center relative overflow-hidden select-none border border-orange-100"
+                   >
+                     <div 
+                       className="absolute left-0 top-0 bottom-0 bg-orange-100 z-0" 
+                       style={{ width: `${resetTodayProgress.progress * 100}%` }} 
+                     />
+                     <span className="relative z-10 flex items-center gap-2">
+                       Reset Today
+                       {resetTodayProgress.isPressing && <span className="text-[10px] font-mono text-orange-500">HOLD</span>}
+                     </span>
+                     <div className="relative z-10 w-5 h-5 rounded-full border-2 border-orange-200 flex items-center justify-center">
+                       {resetTodayProgress.isPressing && (
+                         <svg className="w-5 h-5 absolute inset-0 -rotate-90 text-orange-500" viewBox="0 0 24 24">
+                           <circle 
+                             cx="12" cy="12" r="10" 
+                             fill="none" 
+                             stroke="currentColor" 
+                             strokeWidth="4" 
+                             strokeDasharray={2 * Math.PI * 10} 
+                             strokeDashoffset={2 * Math.PI * 10 * (1 - resetTodayProgress.progress)} 
+                           />
+                         </svg>
+                       )}
+                       {!resetTodayProgress.isPressing && <ChevronRight size={14} className="text-orange-400" />}
+                     </div>
+                   </button>
+
+                   <button 
+                     {...formatProgress.handlers}
+                     className="w-full text-left px-5 py-4 text-red-600 bg-white hover:bg-red-50 rounded-xl font-semibold text-sm flex justify-between items-center relative overflow-hidden select-none border border-red-100"
+                   >
+                     <div 
+                       className="absolute left-0 top-0 bottom-0 bg-red-100 z-0" 
+                       style={{ width: `${formatProgress.progress * 100}%` }} 
+                     />
+                     <span className="relative z-10 flex items-center gap-2">
+                       Format System
+                       {formatProgress.isPressing && <span className="text-[10px] font-mono text-red-500">HOLD</span>}
+                     </span>
+                     <div className="relative z-10 w-5 h-5 rounded-full border-2 border-red-200 flex items-center justify-center">
+                       {formatProgress.isPressing && (
+                         <svg className="w-5 h-5 absolute inset-0 -rotate-90 text-red-500" viewBox="0 0 24 24">
+                           <circle 
+                             cx="12" cy="12" r="10" 
+                             fill="none" 
+                             stroke="currentColor" 
+                             strokeWidth="4" 
+                             strokeDasharray={2 * Math.PI * 10} 
+                             strokeDashoffset={2 * Math.PI * 10 * (1 - formatProgress.progress)} 
+                           />
+                         </svg>
+                       )}
+                       {!formatProgress.isPressing && <ChevronRight size={14} className="text-red-400" />}
+                     </div>
                    </button>
                 </section>
              </motion.div>
@@ -1013,15 +1163,30 @@ export default function App() {
                             <div className="space-y-3">
                                {items.map((item, idx) => {
                                   const isChecked = data.groceryChecklist?.[item] || false;
-                                  const displayItem = multiplyItem(item, cartDuration);
+                                  const displayItem = multiplyItem(data.editedItems?.[item] || item, cartDuration);
                                   return (
-                                     <label key={idx} className={cn("flex items-start gap-3 cursor-pointer group transition-all", isChecked && "opacity-40 grayscale")}>
+                                     <ItemLongPress 
+                                        key={idx} 
+                                        item={item}
+                                        onEdit={(original: string) => setEditingItemModal({ isOpen: true, original, text: data.editedItems?.[original] || original })}
+                                        className={cn("flex items-start gap-3 cursor-pointer group transition-all select-none", isChecked && "opacity-40 grayscale")}
+                                     >
                                         <input type="checkbox" className="hidden" checked={isChecked} onChange={() => toggleGroceryItem(item)} />
-                                        <div className={cn("w-5 h-5 rounded flex items-center justify-center border transition-all mt-0.5 shrink-0", isChecked ? "bg-[var(--color-accent)] border-[var(--color-accent)]" : "border-zinc-300 bg-zinc-50 group-hover:border-zinc-500")}>
+                                        <div 
+                                          onClick={(e) => {
+                                             // we can just let it propagate to ItemLongPress's onClick
+                                             // but wait, input checkbox needs to be toggled
+                                             // ItemLongPress intercepts onClick and handles it
+                                             // so we should just call toggleGroceryItem
+                                             e.preventDefault();
+                                             toggleGroceryItem(item);
+                                          }}
+                                          className={cn("w-5 h-5 rounded flex items-center justify-center border transition-all mt-0.5 shrink-0 pointer-events-auto", isChecked ? "bg-[var(--color-accent)] border-[var(--color-accent)]" : "border-zinc-300 bg-zinc-50 group-hover:border-zinc-500")}
+                                        >
                                            {isChecked && <Check size={14} className="text-white" />}
                                         </div>
-                                        <span className={cn("text-sm transition-all", isChecked ? "text-zinc-400 line-through" : "text-zinc-800")}>{displayItem}</span>
-                                     </label>
+                                        <span onClick={(e) => { e.preventDefault(); toggleGroceryItem(item); }} className={cn("text-sm transition-all pointer-events-auto", isChecked ? "text-zinc-400 line-through" : "text-zinc-800")}>{displayItem}</span>
+                                     </ItemLongPress>
                                   )
                                })}
                             </div>
@@ -1153,6 +1318,58 @@ export default function App() {
             </motion.div>
           </div>
         )}
+        {editingItemModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+               className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"
+               onClick={() => setEditingItemModal(null)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl p-6 shadow-2xl relative w-full max-w-sm border border-zinc-200"
+            >
+               <h3 className="text-xl font-display font-bold text-zinc-950 mb-4">Edit Item</h3>
+               
+               <input
+                 type="text"
+                 autoFocus
+                 value={editingItemModal.text}
+                 onChange={(e) => setEditingItemModal(prev => prev ? {...prev, text: e.target.value} : null)}
+                 className="w-full bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-3 text-zinc-900 font-medium mb-6 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 transition-all"
+               />
+
+               <div className="flex gap-3">
+                 <button 
+                   onClick={() => {
+                     setData(prev => ({
+                       ...prev,
+                       deletedItems: [...(prev.deletedItems || []), editingItemModal.original]
+                     }));
+                     setEditingItemModal(null);
+                   }}
+                   className="flex-1 bg-red-50 text-red-600 font-bold py-3 rounded-xl hover:bg-red-100 transition-colors"
+                 >
+                   Delete
+                 </button>
+                 <button 
+                   onClick={() => {
+                     setData(prev => ({
+                       ...prev,
+                       editedItems: { ...prev.editedItems, [editingItemModal.original]: editingItemModal.text }
+                     }));
+                     setEditingItemModal(null);
+                   }}
+                   className="flex-[2] bg-zinc-900 text-white font-bold py-3 rounded-xl hover:bg-zinc-800 transition-colors"
+                 >
+                   Save
+                 </button>
+               </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Bottom Nav */}
@@ -1185,8 +1402,8 @@ export default function App() {
               className={cn(
                 "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 mx-auto",
                 activeTab === 'dashboard' 
-                  ? "bg-[var(--color-accent)] text-white shadow-lg shadow-[var(--color-accent)]/30 animate-subtle-pulse" 
-                  : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-950"
+                  ? "bg-[var(--color-accent)] text-white shadow-xl shadow-[var(--color-accent)]/50 scale-110 drop-shadow-lg" 
+                  : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-950 scale-100"
               )}
             >
               <LayoutDashboard size={22} />

@@ -39,6 +39,8 @@ export type AppData = {
   lastWaterLogTimestamp?: number;
   lastWaterReminderShown?: number;
   lastWeeklySummaryDate?: string;
+  editedItems?: Record<string, string>;
+  deletedItems?: string[];
 };
 
-export const STORAGE_KEY = 'appData_v4';
+export const STORAGE_KEY = 'appData_v5';

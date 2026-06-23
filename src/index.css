@@ -2,6 +2,9 @@
 @import "tailwindcss";
 
 @theme {
+  --color-accent: #d93838;
+  --color-accent-hover: #bc2f2f;
+  
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;

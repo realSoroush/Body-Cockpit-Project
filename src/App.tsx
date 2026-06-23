@@ -25,6 +25,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import confetti from 'canvas-confetti';
 import { 
   LineChart, 
   Line, 
@@ -99,7 +100,7 @@ function ConsistencyRing({ score }: { score: number }) {
            cx="64" 
            cy="64" 
            r={radius} 
-           className={cn("transition-all duration-1000 ease-out", score >= 80 ? "stroke-zinc-950" : "stroke-zinc-400")} 
+           className={cn("transition-all duration-1000 ease-out", score >= 80 ? "stroke-[var(--color-accent)]" : "stroke-zinc-400")} 
            strokeWidth="6" 
            fill="none" 
            strokeDasharray={circumference}
@@ -183,8 +184,13 @@ export default function App() {
       const isCompleted = completed.includes(mealId);
       
       if (!isCompleted) {
-        setShowCelebration(true);
-        setTimeout(() => setShowCelebration(false), 1500);
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#d93838', '#bc2f2f', '#18181b', '#f4f4f5'],
+          disableForReducedMotion: true
+        });
       }
 
       return {
@@ -316,6 +322,62 @@ export default function App() {
     return `in ${hr}h ${min}m`;
   };
 
+  const chartData = useMemo(() => {
+    const sorted = [...data.weights].sort((a, b) => a.timestamp - b.timestamp);
+    const mapped = sorted.map(log => ({
+      name: format(new Date(log.timestamp), 'dd/MM'),
+      timestamp: log.timestamp,
+      weight: log.weight,
+      projected: null as number | null
+    }));
+
+    if (mapped.length >= 2) {
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+      const n = mapped.length;
+      const startMs = mapped[0].timestamp;
+      
+      mapped.forEach(d => {
+        const x = (d.timestamp - startMs) / (1000 * 60 * 60 * 24);
+        const y = d.weight;
+        sumX += x;
+        sumY += y;
+        sumXY += x * y;
+        sumXX += x * x;
+      });
+
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / n;
+
+      const lastTimestamp = mapped[mapped.length - 1].timestamp;
+      const futureTimestamp = lastTimestamp + 30 * 24 * 60 * 60 * 1000;
+      const futureX = (futureTimestamp - startMs) / (1000 * 60 * 60 * 24);
+      const futureWeight = slope * futureX + intercept;
+      
+      mapped[mapped.length - 1].projected = mapped[mapped.length - 1].weight;
+      mapped.push({
+        name: format(new Date(futureTimestamp), 'dd/MM'),
+        timestamp: futureTimestamp,
+        weight: null,
+        projected: futureWeight
+      });
+    }
+
+    return mapped;
+  }, [data.weights]);
+
+  const [sevenDayWaterAvg, sevenDayMealsAvg] = useMemo(() => {
+    let waterSum = 0;
+    let mealsSum = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = format(d, 'yyyy-MM-dd');
+      waterSum += (data.waterIntake[dateStr] || 0);
+      mealsSum += (data.completedMeals[dateStr]?.length || 0);
+    }
+    return [waterSum / 7, mealsSum / 7];
+  }, [data.waterIntake, data.completedMeals]);
+
   return (
     <div className="min-h-screen bg-[#F9F9F8] pb-32 font-sans text-zinc-900 select-none overflow-x-hidden selection:bg-zinc-200">
       {/* Top Header */}
@@ -347,7 +409,10 @@ export default function App() {
             <motion.div 
               layout
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              className="z-10 w-1/2 h-full bg-white rounded-full shadow-sm border border-zinc-200 flex items-center justify-center font-bold text-[10px] uppercase tracking-widest text-zinc-950"
+              className={cn(
+                "z-10 w-1/2 h-full bg-white rounded-full shadow-sm border border-zinc-200 flex items-center justify-center font-bold text-[10px] uppercase tracking-widest transition-colors",
+                data.isTrainingDay ? "text-[var(--color-accent)]" : "text-zinc-950"
+              )}
             >
               {data.isTrainingDay ? 'Train' : 'Rest'}
             </motion.div>
@@ -383,7 +448,9 @@ export default function App() {
             >
               <div className="flex flex-col gap-1 px-1 pt-4">
                  <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest">{getGreeting()}</p>
-                 <h2 className="text-4xl font-display font-semibold tracking-tight text-zinc-950">Let's crush today.</h2>
+                 <h2 className="text-4xl font-display font-semibold tracking-tight text-zinc-950">
+                    Let's <span className="text-[var(--color-accent)]">crush</span> today.
+                 </h2>
               </div>
 
               {/* Consistency Matrix */}
@@ -412,7 +479,7 @@ export default function App() {
                      <span>Next Objective</span>
                    </div>
                    {nextMeal && (
-                      <span className={cn("font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-md", getCountdown(nextMeal.time) === 'Overdue' ? 'bg-red-500/20 text-red-400' : 'bg-zinc-800 text-zinc-300')}>
+                      <span className={cn("font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-md", getCountdown(nextMeal.time) === 'Overdue' ? 'bg-[var(--color-accent)]/20 text-[var(--color-accent)]' : 'bg-zinc-800 text-zinc-300')}>
                         {getCountdown(nextMeal.time)}
                       </span>
                    )}
@@ -429,7 +496,7 @@ export default function App() {
                       </div>
                       <button 
                         onClick={() => toggleMealComplete(nextMeal.id)}
-                        className="bg-white text-zinc-950 p-3 rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg"
+                        className="bg-white text-zinc-950 p-3 rounded-full hover:scale-105 active:scale-95 hover:text-[var(--color-accent)] transition-all shadow-lg"
                       >
                         <Check size={24} strokeWidth={3} />
                       </button>
@@ -496,7 +563,7 @@ export default function App() {
                       className={cn(
                         "flex-1 h-8 rounded-sm transition-all duration-500",
                         (i * 250) < (data.waterIntake[todayStr] || 0) 
-                          ? "bg-zinc-950" 
+                          ? "bg-[var(--color-accent)]" 
                           : "bg-zinc-100"
                       )}
                     />
@@ -510,6 +577,28 @@ export default function App() {
                   <Plus size={18} />
                   Add 250ml
                 </button>
+              </section>
+
+              {/* Insights */}
+              <section className="grid grid-cols-2 gap-4">
+                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-200">
+                    <div className="flex items-center gap-1.5 mb-2 text-zinc-500 font-mono text-[9px] uppercase tracking-widest">
+                      <Droplets size={12} />
+                      <span>7-Day Water Avg</span>
+                    </div>
+                    <p className="text-2xl font-display font-bold text-zinc-950 tracking-tighter">
+                      {(sevenDayWaterAvg / 1000).toFixed(1)}<span className="text-base text-zinc-400 font-normal">L</span>
+                    </p>
+                 </div>
+                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-200">
+                    <div className="flex items-center gap-1.5 mb-2 text-zinc-500 font-mono text-[9px] uppercase tracking-widest">
+                      <Flame size={12} />
+                      <span>7-Day Meals Avg</span>
+                    </div>
+                    <p className="text-2xl font-display font-bold text-zinc-950 tracking-tighter">
+                      {sevenDayMealsAvg.toFixed(1)}<span className="text-base text-zinc-400 font-normal">/day</span>
+                    </p>
+                 </div>
               </section>
 
               {/* Tip of Today */}
@@ -543,10 +632,7 @@ export default function App() {
                 </div>
                 <div className="h-56 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={[...data.weights].reverse().map(log => ({ 
-                      name: format(new Date(log.timestamp), 'dd/MM'), 
-                      weight: log.weight 
-                    }))}>
+                    <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                       <XAxis 
                         dataKey="name" 
@@ -568,10 +654,20 @@ export default function App() {
                       <Line 
                         type="monotone" 
                         dataKey="weight" 
-                        stroke="#09090b" 
+                        stroke="var(--color-accent)" 
                         strokeWidth={3} 
-                        dot={{ r: 4, fill: '#09090b', strokeWidth: 2, stroke: '#fff' }} 
-                        activeDot={{ r: 6, strokeWidth: 0 }} 
+                        dot={{ r: 4, fill: 'var(--color-accent)', strokeWidth: 2, stroke: '#fff' }} 
+                        activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--color-accent-hover)' }} 
+                        connectNulls
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="projected" 
+                        stroke="var(--color-accent)" 
+                        strokeWidth={2} 
+                        strokeDasharray="4 4"
+                        dot={false}
+                        activeDot={false}
                         connectNulls
                       />
                     </LineChart>
@@ -602,7 +698,7 @@ export default function App() {
                       addWeightLog(parseFloat(input.value));
                       input.value = '';
                     }}
-                    className="bg-zinc-950 text-zinc-50 px-6 rounded-xl hover:bg-zinc-800 active:scale-95 transition-all flex-shrink-0"
+                    className="bg-[var(--color-accent)] text-white px-6 rounded-xl hover:bg-[var(--color-accent-hover)] active:scale-95 transition-all flex-shrink-0"
                   >
                     <Plus size={20} />
                   </button>
@@ -652,7 +748,7 @@ export default function App() {
                       className={cn(
                         "flex-shrink-0 w-14 py-3 rounded-xl font-bold text-sm transition-all border",
                         selectedDayIndex === i 
-                          ? "bg-zinc-950 text-zinc-50 border-zinc-950 shadow-md" 
+                          ? "bg-[var(--color-accent)] text-white border-[var(--color-accent)] shadow-md" 
                           : "bg-white text-zinc-400 border-zinc-200 hover:border-zinc-300"
                       )}
                     >
@@ -681,7 +777,7 @@ export default function App() {
                          <div>
                            <div className="flex items-center gap-2">
                              <h3 className="font-display font-semibold text-lg text-zinc-950">{meal.name}</h3>
-                             {isCompleted && <CheckCircle2 size={18} className="text-zinc-950" />}
+                             {isCompleted && <CheckCircle2 size={18} className="text-[var(--color-accent)]" />}
                            </div>
                            <div className="flex items-center gap-1.5 text-zinc-500 font-mono text-[10px] mt-1">
                              <Clock size={10} />
@@ -743,7 +839,7 @@ export default function App() {
 
                 <section className="grid grid-cols-2 gap-4">
                    <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm flex flex-col items-center">
-                      <Flame size={20} className="text-zinc-950 mb-3" />
+                      <Flame size={20} className="text-[var(--color-accent)] mb-3" />
                       <p className="text-3xl font-display font-bold text-zinc-950">
                          {Object.keys(data.completedMeals).length}
                       </p>
@@ -815,7 +911,7 @@ export default function App() {
                                   return (
                                      <label key={idx} className={cn("flex items-start gap-3 cursor-pointer group transition-all", isChecked && "opacity-40 grayscale")}>
                                         <input type="checkbox" className="hidden" checked={isChecked} onChange={() => toggleGroceryItem(item)} />
-                                        <div className={cn("w-5 h-5 rounded flex items-center justify-center border transition-all mt-0.5 shrink-0", isChecked ? "bg-zinc-950 border-zinc-950" : "border-zinc-300 bg-zinc-50 group-hover:border-zinc-500")}>
+                                        <div className={cn("w-5 h-5 rounded flex items-center justify-center border transition-all mt-0.5 shrink-0", isChecked ? "bg-[var(--color-accent)] border-[var(--color-accent)]" : "border-zinc-300 bg-zinc-50 group-hover:border-zinc-500")}>
                                            {isChecked && <Check size={14} className="text-white" />}
                                         </div>
                                         <span className={cn("text-sm transition-all", isChecked ? "text-zinc-400 line-through" : "text-zinc-800")}>{displayItem}</span>
@@ -863,7 +959,7 @@ export default function App() {
               className={cn(
                 "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 mx-auto",
                 activeTab === 'dashboard' 
-                  ? "bg-zinc-950 text-white shadow-lg shadow-zinc-400/30 animate-subtle-pulse" 
+                  ? "bg-[var(--color-accent)] text-white shadow-lg shadow-[var(--color-accent)]/30 animate-subtle-pulse" 
                   : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-950"
               )}
             >
@@ -897,7 +993,7 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
       onClick={onClick}
       className={cn(
         "flex flex-col items-center justify-center w-14 h-14 rounded-2xl gap-1 transition-all duration-300",
-        active ? "text-zinc-950 bg-zinc-100 scale-105" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50"
+        active ? "text-[var(--color-accent)] bg-[var(--color-accent)]/10 scale-105" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50"
       )}
     >
       {icon}

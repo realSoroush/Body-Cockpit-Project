@@ -124,9 +124,71 @@ export default function App() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [now, setNow] = useState(new Date());
   const [cartDuration, setCartDuration] = useState<number>(7);
+  const [isCartDropdownOpen, setIsCartDropdownOpen] = useState(false);
+  
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, message: string, action: () => void} | null>(null);
+  const [waterReminderModal, setWaterReminderModal] = useState(false);
+  const [weeklySummaryModal, setWeeklySummaryModal] = useState<{isOpen: boolean, hydrationAvg: number, mealAvg: number} | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000);
+    const checkScheduledEvents = () => {
+       const d = new Date();
+       setNow(d);
+       
+       setData(prev => {
+         let updated = { ...prev };
+         let changed = false;
+         
+         const hour = d.getHours();
+         if (hour >= 9 && hour <= 20) {
+           const lastLog = prev.lastWaterLogTimestamp || 0;
+           const hoursSinceLastLog = (d.getTime() - lastLog) / (1000 * 60 * 60);
+           const lastReminder = prev.lastWaterReminderShown || 0;
+           const hoursSinceLastReminder = (d.getTime() - lastReminder) / (1000 * 60 * 60);
+           
+           if (hoursSinceLastLog >= 3 && hoursSinceLastReminder >= 3) {
+              setWaterReminderModal(true);
+              updated.lastWaterReminderShown = d.getTime();
+              changed = true;
+           }
+         }
+         
+         if (d.getDay() === 6) { 
+            const currentDayStr = format(d, 'yyyy-MM-dd');
+            if (prev.lastWeeklySummaryDate !== currentDayStr) {
+               let waterSum = 0;
+               let mealsSum = 0;
+               for (let i = 0; i < 7; i++) {
+                 const checkDate = new Date(d);
+                 checkDate.setDate(checkDate.getDate() - i);
+                 const checkDateStr = format(checkDate, 'yyyy-MM-dd');
+                 waterSum += (prev.waterIntake[checkDateStr] || 0);
+                 mealsSum += (prev.completedMeals[checkDateStr]?.length || 0);
+               }
+               setWeeklySummaryModal({
+                 isOpen: true,
+                 hydrationAvg: waterSum / 7,
+                 mealAvg: mealsSum / 7
+               });
+               updated.lastWeeklySummaryDate = currentDayStr;
+               changed = true;
+               
+               confetti({
+                  particleCount: 150,
+                  spread: 100,
+                  origin: { y: 0.5 },
+                  colors: ['#d93838', '#bc2f2f', '#18181b', '#f4f4f5'],
+                  disableForReducedMotion: true
+               });
+            }
+         }
+         
+         return changed ? updated : prev;
+       });
+    };
+    
+    checkScheduledEvents();
+    const timer = setInterval(checkScheduledEvents, 60000);
     return () => clearInterval(timer);
   }, []);
 
@@ -166,7 +228,8 @@ export default function App() {
       if (current >= 4000) return prev;
       return {
         ...prev,
-        waterIntake: { ...prev.waterIntake, [todayStr]: Math.min(current + 250, 4000) }
+        waterIntake: { ...prev.waterIntake, [todayStr]: Math.min(current + 250, 4000) },
+        lastWaterLogTimestamp: Date.now()
       };
     });
   };
@@ -397,25 +460,25 @@ export default function App() {
           </h1>
           <button 
             onClick={toggleTrainingDay}
-            className="relative w-36 h-10 rounded-full p-1 transition-all duration-300 flex items-center bg-zinc-100 shadow-inner"
+            className="flex items-center gap-3 bg-white/50 hover:bg-white/80 active:scale-95 transition-all px-4 py-2 rounded-full border border-zinc-200/50 shadow-sm backdrop-blur-md cursor-pointer"
           >
-            <div className={cn(
-              "absolute inset-0 flex items-center justify-around text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-3",
-              data.isTrainingDay ? "flex-row-reverse" : "flex-row"
-            )}>
-              <span>Rest</span>
-              <span>Train</span>
-            </div>
-            <motion.div 
-              layout
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            <span className={cn("text-[10px] font-bold uppercase tracking-widest transition-colors", !data.isTrainingDay ? "text-zinc-900" : "text-zinc-400")}>Rest</span>
+            
+            <div 
               className={cn(
-                "z-10 w-1/2 h-full bg-white rounded-full shadow-sm border border-zinc-200 flex items-center justify-center font-bold text-[10px] uppercase tracking-widest transition-colors",
-                data.isTrainingDay ? "text-[var(--color-accent)]" : "text-zinc-950"
+                "relative flex items-center rounded-full p-1 w-10 h-6 transition-colors duration-300",
+                data.isTrainingDay ? "bg-[var(--color-accent)]" : "bg-zinc-200"
               )}
+              style={{ justifyContent: data.isTrainingDay ? "flex-end" : "flex-start" }}
             >
-              {data.isTrainingDay ? 'Train' : 'Rest'}
-            </motion.div>
+              <motion.div 
+                layout
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="z-10 h-4 w-4 rounded-full bg-white shadow-sm"
+              />
+            </div>
+            
+            <span className={cn("text-[10px] font-bold uppercase tracking-widest transition-colors", data.isTrainingDay ? "text-[var(--color-accent)]" : "text-zinc-400")}>Train</span>
           </button>
         </div>
       </header>
@@ -855,7 +918,14 @@ export default function App() {
                 </section>
                 
                 <section className="bg-white rounded-2xl p-2 shadow-sm border border-zinc-200">
-                   <button onClick={() => {if(confirm('Reset all progress?')) { localStorage.removeItem(STORAGE_KEY); window.location.reload(); }}} className="w-full text-left px-5 py-4 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl font-semibold text-sm flex justify-between items-center active:scale-95 transition-all">
+                   <button onClick={() => setConfirmModal({
+                      isOpen: true,
+                      message: 'Are you sure you want to format the system? All your progress will be permanently lost.',
+                      action: () => {
+                        localStorage.removeItem(STORAGE_KEY);
+                        window.location.reload();
+                      }
+                   })} className="w-full text-left px-5 py-4 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl font-semibold text-sm flex justify-between items-center active:scale-95 transition-all">
                       Format System
                       <ChevronRight size={16} />
                    </button>
@@ -871,26 +941,62 @@ export default function App() {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-6"
              >
-                <div className="bg-zinc-950 rounded-2xl p-6 text-zinc-100 shadow-xl relative overflow-hidden">
-                   <div className="absolute right-0 top-0 opacity-5 transform translate-x-4 -translate-y-4 pointer-events-none text-zinc-100">
-                      <ShoppingCart size={140} />
+                <div className="bg-zinc-950 rounded-2xl p-6 text-zinc-100 shadow-xl relative">
+                   <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none z-0">
+                     <div className="absolute right-0 top-0 opacity-5 transform translate-x-4 -translate-y-4 text-zinc-100">
+                        <ShoppingCart size={140} />
+                     </div>
                    </div>
-                   <div className="flex justify-between items-start relative z-10">
+                   <div className={cn("flex justify-between items-start relative", isCartDropdownOpen ? "z-[60]" : "z-10")}>
                      <div className="pr-4">
                        <h2 className="text-3xl font-display font-semibold tracking-tight mb-2">Logistics</h2>
                        <p className="text-zinc-400 text-sm font-mono tracking-tight">Auto-generated resupply manifest.</p>
                      </div>
-                     <div className="bg-zinc-800 rounded-xl px-3 py-2 shrink-0 flex items-center gap-1 cursor-pointer border border-zinc-700">
-                       <select 
-                         value={cartDuration}
-                         onChange={(e) => setCartDuration(Number(e.target.value))}
-                         className="bg-transparent text-zinc-100 font-mono text-[10px] uppercase tracking-widest outline-none cursor-pointer appearance-none [&>option]:text-zinc-950"
+                     <div className={cn("relative shrink-0", isCartDropdownOpen && "z-[60]")}>
+                       <button
+                         onClick={() => setIsCartDropdownOpen(!isCartDropdownOpen)}
+                         className="bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all rounded-xl px-3 py-2 flex items-center gap-2 border border-zinc-700 shadow-sm"
                        >
-                         <option value={7}>7 Days</option>
-                         <option value={14}>14 Days</option>
-                         <option value={30}>30 Days</option>
-                       </select>
-                       <ChevronDown size={12} className="text-zinc-400 pointer-events-none" />
+                         <span className="bg-transparent text-zinc-100 font-mono text-[10px] uppercase tracking-widest outline-none">{cartDuration} Days</span>
+                         <ChevronDown size={12} className={cn("text-zinc-400 transition-transform duration-300", isCartDropdownOpen && "rotate-180")} />
+                       </button>
+
+                       <AnimatePresence>
+                         {isCartDropdownOpen && (
+                           <>
+                             <div 
+                               className="fixed inset-0 z-40" 
+                               onClick={() => setIsCartDropdownOpen(false)} 
+                             />
+                             <motion.div 
+                               initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                               animate={{ opacity: 1, y: 0, scale: 1 }}
+                               exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                               transition={{ duration: 0.15, ease: "easeOut" }}
+                               className="absolute right-0 top-full mt-2 w-36 bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50 origin-top-right"
+                             >
+                               {[7, 14, 30].map(val => (
+                                 <button
+                                   key={val}
+                                   onClick={() => {
+                                     setCartDuration(val);
+                                     setIsCartDropdownOpen(false);
+                                   }}
+                                   className={cn(
+                                     "w-full text-left px-4 py-3 font-mono text-[10px] uppercase tracking-widest transition-colors flex items-center justify-between group",
+                                     cartDuration === val 
+                                      ? "bg-zinc-700/50 text-[var(--color-accent)] font-bold" 
+                                      : "text-zinc-300 hover:bg-zinc-700 hover:text-white"
+                                   )}
+                                 >
+                                   {val} Days
+                                   {cartDuration === val && <Check size={12} className="text-[var(--color-accent)]" />}
+                                 </button>
+                               ))}
+                             </motion.div>
+                           </>
+                         )}
+                       </AnimatePresence>
                      </div>
                    </div>
                 </div>
@@ -928,6 +1034,126 @@ export default function App() {
 
         </AnimatePresence>
       </main>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {confirmModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"
+              onClick={() => setConfirmModal(null)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl p-6 shadow-2xl relative w-full max-w-sm border border-zinc-200"
+            >
+               <h3 className="text-xl font-display font-bold text-zinc-950 mb-2">Confirm Action</h3>
+               <p className="text-sm text-zinc-500 mb-6">{confirmModal.message}</p>
+               <div className="flex gap-3">
+                 <button 
+                   onClick={() => setConfirmModal(null)}
+                   className="flex-1 bg-zinc-100 text-zinc-600 font-bold py-3 rounded-xl hover:bg-zinc-200 transition-colors"
+                 >
+                   Cancel
+                 </button>
+                 <button 
+                   onClick={() => {
+                     confirmModal.action();
+                     setConfirmModal(null);
+                   }}
+                   className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                 >
+                   Confirm
+                 </button>
+               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {waterReminderModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"
+              onClick={() => setWaterReminderModal(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl p-6 shadow-2xl relative w-full max-w-sm border border-zinc-200 text-center"
+            >
+               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <Droplets size={32} className="text-blue-500" />
+               </div>
+               <h3 className="text-2xl font-display font-bold text-zinc-950 mb-2">Hydration Check</h3>
+               <p className="text-sm text-zinc-500 mb-6">It's been over 3 hours since your last water log. Drink up and stay optimized.</p>
+               <button 
+                 onClick={() => {
+                   updateWater();
+                   setWaterReminderModal(false);
+                 }}
+                 className="w-full bg-[var(--color-accent)] text-white font-bold py-4 rounded-xl hover:bg-[var(--color-accent-hover)] transition-colors shadow-lg shadow-[var(--color-accent)]/20"
+               >
+                 Log 250ml Now
+               </button>
+               <button 
+                 onClick={() => setWaterReminderModal(false)}
+                 className="w-full mt-3 text-zinc-400 text-sm font-semibold py-2"
+               >
+                 Dismiss
+               </button>
+            </motion.div>
+          </div>
+        )}
+
+        {weeklySummaryModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+               className="absolute inset-0 bg-zinc-950/60 backdrop-blur-md"
+               onClick={() => setWeeklySummaryModal(null)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 40 }}
+              className="bg-zinc-950 text-white rounded-3xl p-8 shadow-2xl relative w-full max-w-sm border border-zinc-800 text-center overflow-hidden"
+            >
+               <Sparkles size={48} className="text-[var(--color-accent)] mx-auto mb-6" />
+               <h3 className="text-3xl font-display font-bold tracking-tight mb-2">Weekly Review</h3>
+               <p className="text-zinc-400 font-mono text-xs uppercase tracking-widest mb-8">Performance Data</p>
+               
+               <div className="grid grid-cols-2 gap-4 mb-8">
+                 <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+                    <Droplets size={20} className="text-blue-400 mx-auto mb-2" />
+                    <p className="text-2xl font-display font-bold">
+                       {(weeklySummaryModal.hydrationAvg / 1000).toFixed(1)}<span className="text-sm font-normal text-zinc-500">L</span>
+                    </p>
+                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mt-1">Avg Water</p>
+                 </div>
+                 <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+                    <Flame size={20} className="text-[var(--color-accent)] mx-auto mb-2" />
+                    <p className="text-2xl font-display font-bold">
+                       {weeklySummaryModal.mealAvg.toFixed(1)}
+                    </p>
+                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mt-1">Avg Meals</p>
+                 </div>
+               </div>
+
+               <button 
+                 onClick={() => setWeeklySummaryModal(null)}
+                 className="w-full bg-white text-zinc-950 font-bold py-4 rounded-xl hover:bg-zinc-100 transition-colors"
+               >
+                 Acknowledge
+               </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom Nav */}
       <div className="fixed bottom-6 left-0 right-0 flex justify-center z-50 px-4 pointer-events-none">

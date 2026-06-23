@@ -36,6 +36,9 @@ export type AppData = {
   selectedOptions: Record<string, number>; // mealId -> optionIndex
   isTrainingDay: boolean;
   groceryChecklist: Record<string, boolean>;
+  lastWaterLogTimestamp?: number;
+  lastWaterReminderShown?: number;
+  lastWeeklySummaryDate?: string;
 };
 
 export const STORAGE_KEY = 'appData_v4';

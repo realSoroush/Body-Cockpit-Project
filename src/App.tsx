@@ -87,20 +87,20 @@ function multiplyItem(item: string, days: number): string {
 }
 
 function ConsistencyRing({ score }: { score: number }) {
-  const radius = 36;
+  const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
   
   return (
-    <div className="relative w-24 h-24 flex items-center justify-center">
+    <div className="relative w-32 h-32 flex items-center justify-center">
        <svg className="w-full h-full transform -rotate-90">
-         <circle cx="48" cy="48" r={radius} className="stroke-slate-100" strokeWidth="8" fill="none" />
+         <circle cx="64" cy="64" r={radius} className="stroke-zinc-100" strokeWidth="6" fill="none" />
          <circle 
-           cx="48" 
-           cy="48" 
+           cx="64" 
+           cy="64" 
            r={radius} 
-           className={cn("transition-all duration-1000 ease-out", score >= 80 ? "stroke-purple-500" : score >= 50 ? "stroke-blue-500" : "stroke-orange-500")} 
-           strokeWidth="8" 
+           className={cn("transition-all duration-1000 ease-out", score >= 80 ? "stroke-zinc-950" : "stroke-zinc-400")} 
+           strokeWidth="6" 
            fill="none" 
            strokeDasharray={circumference}
            strokeDashoffset={offset}
@@ -108,8 +108,8 @@ function ConsistencyRing({ score }: { score: number }) {
          />
        </svg>
        <div className="absolute flex flex-col items-center justify-center">
-         <span className="text-2xl font-black text-slate-800">{score}</span>
-         <span className="text-[8px] uppercase tracking-widest font-black text-slate-400">Score</span>
+         <span className="text-4xl font-display font-bold text-zinc-950 tracking-tighter">{score}</span>
+         <span className="text-[9px] uppercase tracking-widest font-bold text-zinc-400 mt-1">Score</span>
        </div>
     </div>
   );
@@ -317,42 +317,39 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 font-sans text-slate-900 select-none overflow-x-hidden">
-      {/* Top Header / Toggle */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#F9F9F8] pb-32 font-sans text-zinc-900 select-none overflow-x-hidden selection:bg-zinc-200">
+      {/* Top Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-200/50 flex flex-col">
         {/* Tehran Time Bar */}
-        <div className="bg-slate-900 text-white py-1 px-4 text-[10px] uppercase tracking-tighter font-mono flex justify-between items-center opacity-90">
+        <div className="bg-zinc-950 text-zinc-100 py-1.5 px-6 text-[10px] uppercase tracking-widest font-mono flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <CalendarIcon size={10} className="text-blue-400" />
+            <Clock size={10} className="text-zinc-400" />
             <span className="truncate max-w-[200px]">{tehranTime}</span>
           </div>
-          <span className="text-blue-400 font-bold">Tehran, IR</span>
+          <span className="text-zinc-400 font-bold">TEHRAN, IR</span>
         </div>
         
-        <div className="px-6 py-4 flex justify-between items-center bg-white/80 backdrop-blur-md">
-          <h1 className="text-xl font-black tracking-tighter bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            BODY COCKPIT
+        <div className="px-6 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-display font-extrabold tracking-tight text-zinc-950 uppercase">
+            Cockpit
           </h1>
           <button 
             onClick={toggleTrainingDay}
-            className={cn(
-              "relative w-36 h-9 rounded-full p-1 transition-all duration-300 flex items-center",
-              data.isTrainingDay ? "bg-purple-600 shadow-lg shadow-purple-200" : "bg-blue-600 shadow-lg shadow-blue-200"
-            )}
+            className="relative w-36 h-10 rounded-full p-1 transition-all duration-300 flex items-center bg-zinc-100 shadow-inner"
           >
             <div className={cn(
-              "absolute inset-0 flex items-center justify-around text-[9px] font-black uppercase tracking-wider text-white px-3",
+              "absolute inset-0 flex items-center justify-around text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-3",
               data.isTrainingDay ? "flex-row-reverse" : "flex-row"
             )}>
-              <span>Normal</span>
-              <span>Training</span>
+              <span>Rest</span>
+              <span>Train</span>
             </div>
             <motion.div 
               layout
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              className="z-10 w-1/2 h-full bg-white rounded-full shadow-sm flex items-center justify-center font-black text-[9px] uppercase text-slate-800"
+              className="z-10 w-1/2 h-full bg-white rounded-full shadow-sm border border-zinc-200 flex items-center justify-center font-bold text-[10px] uppercase tracking-widest text-zinc-950"
             >
-              {data.isTrainingDay ? 'Training' : 'Normal'}
+              {data.isTrainingDay ? 'Train' : 'Rest'}
             </motion.div>
           </button>
         </div>
@@ -382,118 +379,125 @@ export default function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-6"
+              className="space-y-8"
             >
-              <div className="flex items-end justify-between px-2 pt-2">
-                 <div>
-                   <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">{getGreeting()}</p>
-                   <h2 className="text-2xl font-black text-slate-800 mt-0.5">Let's crush today.</h2>
-                 </div>
+              <div className="flex flex-col gap-1 px-1 pt-4">
+                 <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest">{getGreeting()}</p>
+                 <h2 className="text-4xl font-display font-semibold tracking-tight text-zinc-950">Let's crush today.</h2>
               </div>
 
               {/* Consistency Matrix */}
-              <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between">
+              <section className="bg-white rounded-2xl p-6 shadow-sm border border-zinc-200 flex items-center justify-between">
                 <div>
-                  <div className="flex items-center gap-2 mb-1 text-slate-400 font-bold text-xs uppercase tracking-widest">
-                    <Flame size={16} className={todayScore >= 80 ? "text-orange-500 animate-pulse" : "text-slate-300"} />
-                    <span>Consistency</span>
+                  <div className="flex items-center gap-2 mb-2 text-zinc-500 font-mono text-[10px] uppercase tracking-widest">
+                    <Target size={14} />
+                    <span>Daily Discipline</span>
                   </div>
-                  <p className="text-3xl font-black text-slate-800">{todayScore}<span className="text-lg text-slate-400">%</span></p>
-                  <p className="text-xs font-medium text-slate-500 mt-2 max-w-[150px] leading-relaxed">
-                    {todayScore >= 80 ? "On fire! Keep pushing." : "Every action counts. Hydrate or eat to raise your score!"}
+                  <p className="text-4xl font-display font-bold text-zinc-950 tracking-tighter">
+                    {todayScore}<span className="text-xl text-zinc-400 font-normal">%</span>
+                  </p>
+                  <p className="text-sm text-zinc-500 mt-2 max-w-[160px] leading-relaxed">
+                    {todayScore >= 80 ? "Flawless execution." : "Stay on the path. Complete your targets."}
                   </p>
                 </div>
                 <ConsistencyRing score={todayScore} />
               </section>
 
               {/* Next Action */}
-              <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-                <div className="flex items-center justify-between mb-4">
-                   <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest">
-                     <Target size={16} className="text-blue-500" />
-                     <span>Next Action</span>
+              <section className="bg-zinc-950 rounded-2xl p-6 shadow-xl relative overflow-hidden text-zinc-100">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-zinc-800/30 rounded-full blur-3xl -mr-20 -mt-20" />
+                <div className="flex items-center justify-between mb-6 relative z-10">
+                   <div className="flex items-center gap-2 text-zinc-400 font-mono text-[10px] uppercase tracking-widest">
+                     <Target size={14} className="text-zinc-100" />
+                     <span>Next Objective</span>
                    </div>
                    {nextMeal && (
-                      <span className={cn("text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md", getCountdown(nextMeal.time) === 'Overdue' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600')}>
+                      <span className={cn("font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-md", getCountdown(nextMeal.time) === 'Overdue' ? 'bg-red-500/20 text-red-400' : 'bg-zinc-800 text-zinc-300')}>
                         {getCountdown(nextMeal.time)}
                       </span>
                    )}
                 </div>
                 {nextMeal ? (
-                  <div className="relative">
-                    <div className="flex justify-between items-start mb-4">
+                  <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-6">
                       <div>
-                        <h2 className="text-2xl font-bold text-slate-800">{nextMeal.name}</h2>
-                        <div className="flex items-center gap-1.5 text-blue-600 font-semibold text-sm mt-1">
-                          <Clock size={14} />
+                        <h2 className="text-3xl font-display font-semibold tracking-tight mb-2">{nextMeal.name}</h2>
+                        <div className="flex items-center gap-2 text-zinc-400 font-mono text-xs">
+                          <Clock size={12} />
                           <span>{nextMeal.time}</span>
                         </div>
                       </div>
                       <button 
                         onClick={() => toggleMealComplete(nextMeal.id)}
-                        className="bg-blue-600 text-white p-2.5 rounded-2xl shadow-lg shadow-blue-200"
+                        className="bg-white text-zinc-950 p-3 rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg"
                       >
-                        <CheckCircle2 size={24} />
+                        <Check size={24} strokeWidth={3} />
                       </button>
                     </div>
-                    <ul className="space-y-2">
-                       {nextMeal.options[data.selectedOptions[nextMeal.id] || 0].items.map((item, i) => (
-                         <li key={i} className="flex items-center gap-3 text-slate-600 text-sm">
-                           <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                           {item}
-                         </li>
-                       ))}
-                    </ul>
-                    {nextMeal.options[data.selectedOptions[nextMeal.id] || 0].medicines && (
-                       <div className="mt-4 pt-4 border-t border-slate-50">
-                         <div className="flex items-center gap-2 text-purple-600 font-semibold text-xs uppercase tracking-widest">
-                           <Pill size={14} />
-                           <span>Suggested Add-ons</span>
+                    
+                    <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
+                      <ul className="space-y-3">
+                         {nextMeal.options[data.selectedOptions[nextMeal.id] || 0].items.map((item, i) => (
+                           <li key={i} className="flex items-start gap-3 text-zinc-300 text-sm">
+                             <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 mt-1.5 shrink-0" />
+                             <span className="leading-relaxed">{item}</span>
+                           </li>
+                         ))}
+                      </ul>
+                      {nextMeal.options[data.selectedOptions[nextMeal.id] || 0].medicines && (
+                         <div className="mt-4 pt-4 border-t border-zinc-800">
+                           <div className="flex items-center gap-2 text-zinc-500 font-mono text-[10px] uppercase tracking-widest mb-2">
+                             <Pill size={12} />
+                             <span>Supplements</span>
+                           </div>
+                           <p className="text-zinc-300 text-sm">
+                             {nextMeal.options[data.selectedOptions[nextMeal.id] || 0].medicines?.join(', ')}
+                           </p>
                          </div>
-                         <p className="text-slate-500 text-sm mt-1">
-                           {nextMeal.options[data.selectedOptions[nextMeal.id] || 0].medicines?.join(', ')}
-                         </p>
-                       </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <div className="py-8 text-center">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle className="text-green-600" size={32} />
+                  <div className="py-10 text-center relative z-10">
+                    <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/20">
+                      <Check className="text-white" size={32} />
                     </div>
-                    <p className="text-slate-800 font-bold">All meals completed!</p>
-                    <p className="text-slate-400 text-sm">Target reached for today.</p>
+                    <p className="text-white font-display text-xl font-semibold">Targets Neutralized.</p>
+                    <p className="text-zinc-400 text-sm mt-1">Rest and recover for tomorrow.</p>
                   </div>
                 )}
               </section>
 
-              {/* Water Tracker - MOVED TO BOTTOM */}
-              <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest">
-                    <Droplets size={16} className="text-blue-500" />
-                    <span>Hydration</span>
+              {/* Water Tracker */}
+              <section className="bg-white rounded-2xl p-6 shadow-sm border border-zinc-200">
+                <div className="flex justify-between items-end mb-6">
+                  <div>
+                    <div className="flex items-center gap-2 text-zinc-500 font-mono text-[10px] uppercase tracking-widest mb-1">
+                      <Droplets size={14} className="text-zinc-950" />
+                      <span>Hydration</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-display font-bold text-zinc-950 tracking-tighter">{(data.waterIntake[todayStr] || 0) / 1000}</span>
+                      <span className="text-zinc-400 font-mono text-sm">/ 4L</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-black text-blue-600">{(data.waterIntake[todayStr] || 0) / 1000}L / 4L</span>
-                    <button 
-                      onClick={resetWater}
-                      className="p-1.5 text-slate-300 hover:text-slate-400 active:rotate-180 transition-all"
-                    >
-                      <RotateCcw size={16} />
-                    </button>
-                  </div>
+                  <button 
+                    onClick={resetWater}
+                    className="p-2 text-zinc-400 hover:text-zinc-950 active:rotate-180 transition-all bg-zinc-50 rounded-full"
+                  >
+                    <RotateCcw size={14} />
+                  </button>
                 </div>
-                <div className="flex gap-1.5 mb-6">
+                
+                <div className="flex gap-1 mb-6">
                   {Array.from({ length: 16 }).map((_, i) => (
                     <div 
                       key={i} 
                       className={cn(
-                        "flex-1 h-6 rounded-sm transition-all duration-700",
+                        "flex-1 h-8 rounded-sm transition-all duration-500",
                         (i * 250) < (data.waterIntake[todayStr] || 0) 
-                          ? "bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_2px_10px_rgba(37,99,235,0.2)]" 
-                          : "bg-slate-50"
+                          ? "bg-zinc-950" 
+                          : "bg-zinc-100"
                       )}
                     />
                   ))}
@@ -501,29 +505,25 @@ export default function App() {
                 <button 
                   onClick={updateWater}
                   disabled={(data.waterIntake[todayStr] || 0) >= 4000}
-                  className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-blue-100"
+                  className="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-950 py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 border border-zinc-200"
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                   Add 250ml
                 </button>
               </section>
 
               {/* Tip of Today */}
-              <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                   <Sparkles size={48} className="text-purple-600" />
+              <section className="border border-zinc-200 rounded-2xl p-6 relative overflow-hidden bg-white">
+                <div className="absolute -right-4 -top-4 opacity-[0.03] pointer-events-none text-zinc-900">
+                   <Lightbulb size={120} />
                 </div>
-                <div className="flex items-center gap-2 mb-3 text-slate-400 font-bold text-xs uppercase tracking-widest">
-                  <Lightbulb size={16} className="text-yellow-500" />
-                  <span>Tip of Today</span>
+                <div className="flex items-center gap-2 mb-4 text-zinc-500 font-mono text-[10px] uppercase tracking-widest">
+                  <Lightbulb size={14} />
+                  <span>Strategic Insight</span>
                 </div>
-                <p className="text-slate-700 font-medium leading-relaxed italic pr-8">
+                <p className="text-zinc-900 text-lg font-medium leading-relaxed pr-8 font-display tracking-tight">
                   "{dailyTip}"
                 </p>
-                <div className="mt-4 flex items-center gap-1.5 text-[10px] font-black text-blue-600 uppercase tracking-widest">
-                  <span>Keep Pushing</span>
-                  <div className="w-8 h-[1px] bg-blue-100" />
-                </div>
               </section>
             </motion.div>
           )}
@@ -536,10 +536,10 @@ export default function App() {
                exit={{ opacity: 0, x: 20 }}
                className="space-y-6"
             >
-              <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 mb-6 text-slate-400 font-bold text-xs uppercase tracking-widest">
-                  <TrendingUp size={16} className="text-blue-500" />
-                  <span>Measures Tracker</span>
+              <section className="bg-white rounded-2xl p-6 shadow-sm border border-zinc-200">
+                <div className="flex items-center gap-2 mb-6 text-zinc-500 font-mono text-[10px] uppercase tracking-widest">
+                  <TrendingUp size={14} />
+                  <span>Metrics Tracker</span>
                 </div>
                 <div className="h-56 w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -547,31 +547,31 @@ export default function App() {
                       name: format(new Date(log.timestamp), 'dd/MM'), 
                       weight: log.weight 
                     }))}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                       <XAxis 
                         dataKey="name" 
                         axisLine={false} 
                         tickLine={false} 
-                        tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} 
+                        tick={{ fontSize: 10, fill: '#a1a1aa', fontFamily: 'JetBrains Mono' }} 
                       />
                       <YAxis 
                         width={30}
                         axisLine={false} 
                         tickLine={false} 
-                        tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                        tick={{ fontSize: 10, fill: '#a1a1aa', fontFamily: 'JetBrains Mono' }}
                         domain={['auto', 'auto']}
                       />
                       <Tooltip 
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', background: '#fff' }} 
-                        labelStyle={{ color: '#94a3b8', fontWeight: 800, marginBottom: '4px' }}
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #e4e4e7', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', background: '#fff' }} 
+                        labelStyle={{ color: '#52525b', fontFamily: 'JetBrains Mono', fontSize: '12px', marginBottom: '4px' }}
                       />
                       <Line 
                         type="monotone" 
                         dataKey="weight" 
-                        stroke="#2563eb" 
-                        strokeWidth={4} 
-                        dot={{ r: 5, fill: '#2563eb', strokeWidth: 3, stroke: '#fff' }} 
-                        activeDot={{ r: 8, strokeWidth: 0 }} 
+                        stroke="#09090b" 
+                        strokeWidth={3} 
+                        dot={{ r: 4, fill: '#09090b', strokeWidth: 2, stroke: '#fff' }} 
+                        activeDot={{ r: 6, strokeWidth: 0 }} 
                         connectNulls
                       />
                     </LineChart>
@@ -579,15 +579,15 @@ export default function App() {
                 </div>
               </section>
 
-              <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">New Measure</h3>
-                <div className="flex gap-2 md:gap-3">
+              <section className="bg-white rounded-2xl p-6 shadow-sm border border-zinc-200">
+                <h3 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">New Entry</h3>
+                <div className="flex gap-3">
                   <input 
                     id="new-weight-input"
                     type="number" 
                     placeholder="00.0"
                     step="0.1"
-                    className="flex-1 w-full min-w-0 bg-slate-50 border-none rounded-2xl px-4 py-3 md:p-4 text-lg md:text-xl font-black text-slate-800 placeholder:text-slate-200 outline-none focus:ring-2 focus:ring-blue-100"
+                    className="flex-1 w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 font-mono text-xl text-zinc-950 placeholder:text-zinc-300 outline-none focus:ring-2 focus:ring-zinc-950 transition-all"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         const input = e.currentTarget;
@@ -602,32 +602,32 @@ export default function App() {
                       addWeightLog(parseFloat(input.value));
                       input.value = '';
                     }}
-                    className="bg-blue-600 text-white p-3 md:p-4 rounded-2xl shadow-lg shadow-blue-100 active:scale-95 transition-all flex-shrink-0"
+                    className="bg-zinc-950 text-zinc-50 px-6 rounded-xl hover:bg-zinc-800 active:scale-95 transition-all flex-shrink-0"
                   >
-                    <Plus size={24} />
+                    <Plus size={20} />
                   </button>
                 </div>
               </section>
 
               <section className="space-y-3">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Weekly Log</h3>
+                <h3 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest ml-1">History Log</h3>
                 {data.weights.map((log) => (
                   <motion.div 
                     layout
                     key={log.id} 
-                    className="bg-white rounded-2xl p-4 flex justify-between items-center border border-slate-100 group"
+                    className="bg-white rounded-xl p-4 flex justify-between items-center border border-zinc-200 group hover:border-zinc-300 transition-colors"
                   >
                     <div>
-                      <p className="font-black text-slate-800 text-lg leading-tight">{log.weight} <span className="text-xs text-slate-400">kg</span></p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                      <p className="font-mono text-zinc-950 text-lg leading-tight">{log.weight} <span className="text-xs text-zinc-500">kg</span></p>
+                      <p className="text-[10px] text-zinc-400 font-mono mt-0.5">
                         {format(new Date(log.timestamp), 'EEE, MMM dd • HH:mm')}
                       </p>
                     </div>
                     <button 
                       onClick={() => removeWeightLog(log.id)}
-                      className="p-2 text-slate-200 hover:text-red-400 transition-colors"
+                      className="p-2 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </button>
                   </motion.div>
                 ))}
@@ -650,10 +650,10 @@ export default function App() {
                       key={day}
                       onClick={() => setSelectedDayIndex(i)}
                       className={cn(
-                        "flex-shrink-0 w-14 py-3 rounded-2xl font-bold text-sm transition-all",
+                        "flex-shrink-0 w-14 py-3 rounded-xl font-bold text-sm transition-all border",
                         selectedDayIndex === i 
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105" 
-                          : "bg-white text-slate-400 border border-slate-100"
+                          ? "bg-zinc-950 text-zinc-50 border-zinc-950 shadow-md" 
+                          : "bg-white text-zinc-400 border-zinc-200 hover:border-zinc-300"
                       )}
                     >
                       {day}
@@ -672,19 +672,19 @@ export default function App() {
                      <div 
                         key={meal.id}
                         className={cn(
-                          "bg-white rounded-3xl p-5 border transition-all duration-300 relative overflow-hidden",
-                          isCompleted ? "opacity-30 border-slate-200 grayscale-[0.5]" : "border-slate-100 shadow-sm shadow-slate-100/50"
+                          "bg-white rounded-2xl p-5 border transition-all duration-300 relative",
+                          isCompleted ? "opacity-40 border-zinc-200 grayscale" : "border-zinc-200 shadow-sm"
                         )}
                         onClick={() => toggleMealComplete(meal.id)}
                      >
-                       <div className="flex justify-between items-start mb-3">
+                       <div className="flex justify-between items-start mb-4">
                          <div>
                            <div className="flex items-center gap-2">
-                             <h3 className="font-bold text-lg text-slate-800">{meal.name}</h3>
-                             {isCompleted && <CheckCircle2 size={18} className="text-blue-600" />}
+                             <h3 className="font-display font-semibold text-lg text-zinc-950">{meal.name}</h3>
+                             {isCompleted && <CheckCircle2 size={18} className="text-zinc-950" />}
                            </div>
-                           <div className="flex items-center gap-1 text-slate-400 font-bold text-xs mt-0.5">
-                             <Clock size={12} />
+                           <div className="flex items-center gap-1.5 text-zinc-500 font-mono text-[10px] mt-1">
+                             <Clock size={10} />
                              <span>{meal.time}</span>
                            </div>
                          </div>
@@ -694,33 +694,36 @@ export default function App() {
                                e.stopPropagation();
                                rotateMealOption(meal.id, meal.options.length);
                              }}
-                             className="p-2 bg-slate-50 text-slate-600 rounded-xl active:rotate-180 transition-transform"
+                             className="p-2 bg-zinc-100 text-zinc-600 rounded-lg hover:bg-zinc-200 active:rotate-180 transition-all"
                            >
-                             <RefreshCcw size={16} />
+                             <RefreshCcw size={14} />
                            </button>
                          )}
                        </div>
 
-                       <div className="space-y-1.5 mb-4">
+                       <div className="space-y-2 mb-6">
                           {option.items.map((item, i) => (
-                            <p key={i} className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">• {item}</p>
+                            <div key={i} className="flex items-start gap-3">
+                              <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 mt-1.5 shrink-0" />
+                              <span className="text-zinc-700 text-sm leading-relaxed">{item}</span>
+                            </div>
                           ))}
                        </div>
 
                        {/* Medicines */}
                        {option.medicines && (
-                         <div className="mb-4 flex items-center gap-2 bg-purple-50 text-purple-700 px-3 py-2 rounded-xl text-xs font-bold w-fit">
-                           <Pill size={14} />
+                         <div className="mb-6 flex items-center gap-2 bg-zinc-100 text-zinc-800 px-3 py-2 rounded-lg text-xs font-mono w-fit">
+                           <Pill size={12} />
                            <span>{option.medicines.join(', ')}</span>
                          </div>
                        )}
 
                        {/* Macros */}
-                       <div className="flex gap-2 pt-4 border-t border-slate-50">
-                          <MacroBadge label="P" value={option.p} color="text-red-500" />
-                          <MacroBadge label="C" value={option.c} color="text-blue-500" />
-                          <MacroBadge label="F" value={option.f} color="text-orange-500" />
-                          <MacroBadge label="Fib" value={option.fib} color="text-green-500" />
+                       <div className="flex gap-2 pt-4 border-t border-zinc-100">
+                          <MacroBadge label="PR" value={option.p} />
+                          <MacroBadge label="CB" value={option.c} />
+                          <MacroBadge label="FT" value={option.f} />
+                          <MacroBadge label="FB" value={option.fib} />
                        </div>
                      </div>
                    );
@@ -730,34 +733,34 @@ export default function App() {
           )}
            {activeTab === 'profile' && (
              <motion.div key="profile" initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} exit={{opacity:0, x:-20}} className="space-y-6">
-                <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center">
-                   <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-xl">
-                      <User size={32} className="text-slate-400" />
+                <section className="bg-white rounded-2xl p-6 shadow-sm border border-zinc-200 text-center">
+                   <div className="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-zinc-200 shadow-sm">
+                      <User size={40} className="text-zinc-300" />
                    </div>
-                   <h2 className="text-xl font-black text-slate-800">Athlete</h2>
-                   <p className="text-sm font-bold text-slate-400 mt-1">Ready to crush it</p>
+                   <h2 className="text-3xl font-display font-semibold tracking-tight text-zinc-950">Athlete</h2>
+                   <p className="text-xs font-mono text-zinc-400 mt-1 uppercase tracking-widest">System Ready</p>
                 </section>
 
                 <section className="grid grid-cols-2 gap-4">
-                   <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col items-center">
-                      <Flame size={24} className="text-orange-500 mb-2" />
-                      <p className="text-2xl font-black text-slate-800">
+                   <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm flex flex-col items-center">
+                      <Flame size={20} className="text-zinc-950 mb-3" />
+                      <p className="text-3xl font-display font-bold text-zinc-950">
                          {Object.keys(data.completedMeals).length}
                       </p>
-                      <p className="text-[9px] uppercase tracking-widest font-bold text-slate-400 mt-1">Active Days</p>
+                      <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 mt-2">Active Days</p>
                    </div>
-                   <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col items-center">
-                      <Droplets size={24} className="text-blue-500 mb-2" />
-                      <p className="text-2xl font-black text-slate-800">
+                   <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm flex flex-col items-center">
+                      <Droplets size={20} className="text-zinc-950 mb-3" />
+                      <p className="text-3xl font-display font-bold text-zinc-950">
                          {(Object.values(data.waterIntake) as number[]).reduce((a,b)=>a+(b/1000),0).toFixed(1)}L
                       </p>
-                      <p className="text-[9px] uppercase tracking-widest font-bold text-slate-400 mt-1">Total Hydration</p>
+                      <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 mt-2">Total Vol</p>
                    </div>
                 </section>
                 
-                <section className="bg-white rounded-3xl p-2 shadow-sm border border-slate-100">
-                   <button onClick={() => {if(confirm('Reset all progress?')) { localStorage.removeItem(STORAGE_KEY); window.location.reload(); }}} className="w-full text-left px-5 py-4 text-red-500 font-bold text-sm flex justify-between items-center active:scale-95 transition-all">
-                      Reset All Data
+                <section className="bg-white rounded-2xl p-2 shadow-sm border border-zinc-200">
+                   <button onClick={() => {if(confirm('Reset all progress?')) { localStorage.removeItem(STORAGE_KEY); window.location.reload(); }}} className="w-full text-left px-5 py-4 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl font-semibold text-sm flex justify-between items-center active:scale-95 transition-all">
+                      Format System
                       <ChevronRight size={16} />
                    </button>
                 </section>
@@ -772,26 +775,26 @@ export default function App() {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-6"
              >
-                <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-3xl p-6 text-white shadow-lg shadow-purple-500/20 relative overflow-hidden">
-                   <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4 pointer-events-none">
-                      <ShoppingCart size={120} />
+                <div className="bg-zinc-950 rounded-2xl p-6 text-zinc-100 shadow-xl relative overflow-hidden">
+                   <div className="absolute right-0 top-0 opacity-5 transform translate-x-4 -translate-y-4 pointer-events-none text-zinc-100">
+                      <ShoppingCart size={140} />
                    </div>
                    <div className="flex justify-between items-start relative z-10">
                      <div className="pr-4">
-                       <h2 className="text-2xl font-black mb-1">Smart Cart</h2>
-                       <p className="text-blue-100 text-sm font-medium">Auto-generated from your active meal plan structure.</p>
+                       <h2 className="text-3xl font-display font-semibold tracking-tight mb-2">Logistics</h2>
+                       <p className="text-zinc-400 text-sm font-mono tracking-tight">Auto-generated resupply manifest.</p>
                      </div>
-                     <div className="bg-white/20 backdrop-blur-md rounded-xl px-3 py-2 shrink-0 flex items-center gap-1 cursor-pointer">
+                     <div className="bg-zinc-800 rounded-xl px-3 py-2 shrink-0 flex items-center gap-1 cursor-pointer border border-zinc-700">
                        <select 
                          value={cartDuration}
                          onChange={(e) => setCartDuration(Number(e.target.value))}
-                         className="bg-transparent text-white font-bold text-sm outline-none cursor-pointer appearance-none [&>option]:text-slate-800"
+                         className="bg-transparent text-zinc-100 font-mono text-[10px] uppercase tracking-widest outline-none cursor-pointer appearance-none [&>option]:text-zinc-950"
                        >
-                         <option value={7}>1 Week</option>
-                         <option value={14}>2 Weeks</option>
-                         <option value={30}>1 Month</option>
+                         <option value={7}>7 Days</option>
+                         <option value={14}>14 Days</option>
+                         <option value={30}>30 Days</option>
                        </select>
-                       <ChevronDown size={14} className="pointer-events-none" />
+                       <ChevronDown size={12} className="text-zinc-400 pointer-events-none" />
                      </div>
                    </div>
                 </div>
@@ -800,22 +803,22 @@ export default function App() {
                    {(Object.entries(groceryList) as [string, string[]][]).map(([category, items]) => {
                       if (items.length === 0) return null;
                       return (
-                         <section key={category} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 inline-flex items-center gap-2">
+                         <section key={category} className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-200">
+                            <h3 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 flex items-center justify-between">
                                {category}
-                               <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px]">{items.length}</span>
+                               <span className="bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded text-[10px]">{items.length}</span>
                             </h3>
                             <div className="space-y-3">
                                {items.map((item, idx) => {
                                   const isChecked = data.groceryChecklist?.[item] || false;
                                   const displayItem = multiplyItem(item, cartDuration);
                                   return (
-                                     <label key={idx} className={cn("flex items-start gap-3 cursor-pointer group transition-all", isChecked && "opacity-50 grayscale")}>
+                                     <label key={idx} className={cn("flex items-start gap-3 cursor-pointer group transition-all", isChecked && "opacity-40 grayscale")}>
                                         <input type="checkbox" className="hidden" checked={isChecked} onChange={() => toggleGroceryItem(item)} />
-                                        <div className={cn("w-5 h-5 rounded flex items-center justify-center border transition-all mt-0.5 shrink-0", isChecked ? "bg-blue-600 border-blue-600 shadow-sm shadow-blue-200" : "border-slate-300 bg-slate-50 group-hover:border-blue-400")}>
+                                        <div className={cn("w-5 h-5 rounded flex items-center justify-center border transition-all mt-0.5 shrink-0", isChecked ? "bg-zinc-950 border-zinc-950" : "border-zinc-300 bg-zinc-50 group-hover:border-zinc-500")}>
                                            {isChecked && <Check size={14} className="text-white" />}
                                         </div>
-                                        <span className={cn("text-sm font-bold transition-all", isChecked ? "text-slate-400 line-through" : "text-slate-700")}>{displayItem}</span>
+                                        <span className={cn("text-sm transition-all", isChecked ? "text-zinc-400 line-through" : "text-zinc-800")}>{displayItem}</span>
                                      </label>
                                   )
                                })}
@@ -831,50 +834,59 @@ export default function App() {
       </main>
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 px-6 py-4 flex justify-between items-center z-50 rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
-        <div className="flex gap-4">
-           <NavButton 
-             active={activeTab === 'chart'} 
-             onClick={() => setActiveTab('chart')}
-             icon={<TrendingUp size={24} />}
-             label="Measure"
-           />
-           <NavButton 
-             active={activeTab === 'meals'} 
-             onClick={() => setActiveTab('meals')}
-             icon={<UtensilsCrossed size={24} />}
-             label="Meals"
-           />
-        </div>
-        <div className="relative -mt-12 px-2">
-          <button 
-            id="nav-dashboard-btn"
-            onClick={() => setActiveTab('dashboard')}
-            className={cn(
-              "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl mx-auto",
-              activeTab === 'dashboard' 
-                ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white scale-110 rotate-0 shadow-blue-300" 
-                : "bg-white text-slate-400 scale-100 rotate-45 shadow-slate-200"
-            )}
-          >
-            <LayoutDashboard size={28} />
-          </button>
-        </div>
-        <div className="flex gap-4">
-           <NavButton 
-             active={activeTab === 'groceries'} 
-             onClick={() => setActiveTab('groceries')}
-             icon={<ShoppingCart size={24} />}
-             label="Cart"
-           />
-           <NavButton 
-             active={activeTab === 'profile'} 
-             onClick={() => setActiveTab('profile')}
-             icon={<User size={24} />}
-             label="Profile"
-           />
-        </div>
-      </nav>
+      <div className="fixed bottom-6 left-0 right-0 flex justify-center z-50 px-4 pointer-events-none">
+        <nav className="bg-white/90 backdrop-blur-2xl border border-zinc-200/80 p-2 flex justify-between items-center rounded-3xl shadow-2xl shadow-zinc-200/50 w-full max-w-sm pointer-events-auto">
+          <div className="flex gap-1">
+             <NavButton 
+               active={activeTab === 'chart'} 
+               onClick={() => setActiveTab('chart')}
+               icon={<TrendingUp size={20} />}
+               label="Log"
+             />
+             <NavButton 
+               active={activeTab === 'meals'} 
+               onClick={() => setActiveTab('meals')}
+               icon={<UtensilsCrossed size={20} />}
+               label="Fuel"
+             />
+          </div>
+          
+          <div className="px-1">
+            <button 
+              id="nav-dashboard-btn"
+              onClick={() => {
+                if (window.navigator && window.navigator.vibrate) {
+                  window.navigator.vibrate(50);
+                }
+                setActiveTab('dashboard');
+              }}
+              className={cn(
+                "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 mx-auto",
+                activeTab === 'dashboard' 
+                  ? "bg-zinc-950 text-white shadow-lg shadow-zinc-400/30 animate-subtle-pulse" 
+                  : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-950"
+              )}
+            >
+              <LayoutDashboard size={22} />
+            </button>
+          </div>
+
+          <div className="flex gap-1">
+             <NavButton 
+               active={activeTab === 'groceries'} 
+               onClick={() => setActiveTab('groceries')}
+               icon={<ShoppingCart size={20} />}
+               label="Supply"
+             />
+             <NavButton 
+               active={activeTab === 'profile'} 
+               onClick={() => setActiveTab('profile')}
+               icon={<User size={20} />}
+               label="Profile"
+             />
+          </div>
+        </nav>
+      </div>
     </div>
   );
 }
@@ -884,21 +896,21 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
     <button 
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-1 transition-all duration-300",
-        active ? "text-blue-600 scale-110" : "text-slate-300"
+        "flex flex-col items-center justify-center w-14 h-14 rounded-2xl gap-1 transition-all duration-300",
+        active ? "text-zinc-950 bg-zinc-100 scale-105" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50"
       )}
     >
       {icon}
-      <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+      <span className="text-[8px] font-mono font-bold uppercase tracking-widest">{label}</span>
     </button>
   );
 }
 
-function MacroBadge({ label, value, color }: { label: string, value: number, color: string }) {
+function MacroBadge({ label, value }: { label: string, value: number }) {
   return (
-    <div className="bg-slate-50 px-2 py-1 rounded-lg flex items-baseline gap-0.5">
-      <span className="text-[10px] font-black text-slate-400 uppercase">{label}</span>
-      <span className={cn("text-xs font-black", color)}>{value}g</span>
+    <div className="bg-zinc-50 px-2.5 py-1.5 rounded flex flex-col items-center gap-0.5 min-w-[3rem] border border-zinc-100">
+      <span className="text-[9px] font-mono font-bold text-zinc-400">{label}</span>
+      <span className="text-xs font-mono font-bold text-zinc-950">{value}g</span>
     </div>
   );
 }
